@@ -79,15 +79,14 @@ services:
 
     ports:
       # host:container — APP_PORT is the in-container bind port (always 8080);
-      # HOST_PORT is what the outside world connects to. 8080 is taken on this
-      # host, so the default is 9095.
+      # HOST_PORT is what the outside world connects to (7075 by default).
       #
       # Bound to loopback: the gateway is the only intended caller, and it
       # trusts the X-User-Id header this service receives. Anything that can
       # reach this port directly could claim to be any user (given the token),
       # so it must not be exposed on a public interface. Set BIND_ADDRESS to a
       # private IP if the gateway runs on another host.
-      - "${BIND_ADDRESS:-127.0.0.1}:${HOST_PORT:-9095}:8080"
+      - "${BIND_ADDRESS:-127.0.0.1}:${HOST_PORT:-7075}:8080"
 
     # Reach an Ollama / vLLM / LM Studio server running on the host machine.
     # Docker Desktop provides this name already; Linux needs it spelled out.

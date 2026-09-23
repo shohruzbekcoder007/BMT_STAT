@@ -37,7 +37,9 @@ def main() -> None:
     logger = logging.getLogger("app")
 
     bind_host = (os.getenv("APP_HOST") or "0.0.0.0").strip() or "0.0.0.0"
-    port = int(os.getenv("APP_PORT") or "8080")
+    # The image sets APP_PORT=8080 for inside the container; 7075 is the
+    # local-run default.
+    port = int(os.getenv("APP_PORT") or "7075")
     workers = int(os.getenv("API_WORKERS") or "1")
     reload = os.getenv("API_RELOAD", "false").strip().lower() in {
         "1",

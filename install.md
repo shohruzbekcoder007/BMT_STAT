@@ -5,7 +5,7 @@
    - `ollama` — set `OLLAMA_MODEL`; the default `OLLAMA_BASE_URL` already
      points at the host machine's Ollama via `host.docker.internal`
 2. `docker compose build && docker compose up -d`
-3. `curl http://127.0.0.1:9095/ready` (host port — `HOST_PORT`; inside the
+3. `curl http://127.0.0.1:7075/ready` (host port — `HOST_PORT`; inside the
    container the service stays on 8080)
 4. `POST /v1/chat` with `{"message":"..."}`
 

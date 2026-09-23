@@ -192,8 +192,8 @@ Set `API_BEARER_TOKEN` to require `Authorization: Bearer …` on `/v1/chat`.
 Local: see [install_local.md](install_local.md) · Docker: see [install.md](install.md)
 
 ```bash
-# Docker: host port is HOST_PORT (9095 by default). Running locally: 8080.
-curl -s localhost:9095/v1/chat -H 'content-type: application/json' \
+# Docker: host port is HOST_PORT (7075 by default). Running locally: APP_PORT (7075).
+curl -s localhost:7075/v1/chat -H 'content-type: application/json' \
   -d '{"message":"salom"}'
 ```
 
