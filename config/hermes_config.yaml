@@ -1,0 +1,34 @@
+# Hermes profile for the host agent (starter)
+_config_version: 21
+
+model:
+  default: ""
+
+agent:
+  max_iterations: 12
+
+plugins:
+  enabled: []
+  disabled: []
+
+tools:
+  cli:
+    enabled: []
+    disabled:
+      - terminal
+      - browser
+      - web
+      - code_execution
+      - delegation
+
+memory:
+  provider: ""
+
+security:
+  allow_dangerous_tools: false
+
+gateway:
+  enabled: false
+
+logging:
+  level: INFO

@@ -1,0 +1,3 @@
+# Force LF for shell scripts so Docker/Linux entrypoints never see bash\r
+*.sh text eol=lf
+scripts/* text eol=lf

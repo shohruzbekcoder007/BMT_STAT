@@ -1,0 +1,79 @@
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv/
+venv/
+ENV/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Hermes runtime (generated inside container / local profile)
+.hermes/cache/
+.hermes/sessions/
+.hermes/logs/
+.hermes/.env
+
+# Logs & runtime state
+logs/*
+!logs/.gitkeep
+*.log
+*.log.*
+
+# Runtime state
+data/*
+!data/.gitkeep
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Docker
+.docker/
+
+# Backups
+backups/
+*.bak
+*.tar.gz
+*.zip
+
+# Test / temp
+tmp/
+temp/
+.cache/
+*.tmp
