@@ -72,7 +72,7 @@ class DataCommonsMCP:
         api_key: str,
         url: str = DEFAULT_URL,
         timeout: float = 60.0,
-        client_name: str = "methodologyagent",
+        client_name: str = "unstat",
         client_version: str = "0.3.0",
     ) -> None:
         if not api_key:

@@ -2,15 +2,15 @@
 # Hermes host agent - starter
 # =============================================================================
 
-name: methodologyagent
+name: unstat
 
 services:
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    image: methodologyagent:0.3.0
-    container_name: methodologyagent
+    image: unstat:0.3.0
+    container_name: unstat
     restart: unless-stopped
 
     env_file:
@@ -19,7 +19,7 @@ services:
         required: false
 
     environment:
-      APP_NAME: ${APP_NAME:-methodologyagent}
+      APP_NAME: ${APP_NAME:-unstat}
       APP_ENV: ${APP_ENV:-production}
       APP_HOST: 0.0.0.0
       APP_PORT: 8080
@@ -122,10 +122,10 @@ services:
 
 volumes:
   hermes_home:
-    name: methodologyagent-hermes-home
+    name: unstat-hermes-home
   hermes_users:
-    name: methodologyagent-hermes-users
+    name: unstat-hermes-users
 
 networks:
   default:
-    name: methodologyagent-net
+    name: unstat-net

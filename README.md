@@ -98,7 +98,7 @@ reaches outside the container:
 | `todo` | `todo` | plan multi-step work |
 
 Everything Hermes learns lives under `HERMES_HOME` — `memories/`, `skills/`,
-`sessions/`, `state.db`, `SOUL.md` — kept in the `methodologyagent-hermes-home` named
+`sessions/`, `state.db`, `SOUL.md` — kept in the `unstat-hermes-home` named
 volume so a redeploy does not wipe it. `config/hermes_config.yaml` is copied in
 only when the volume has no `config.yaml` yet; delete the volume to re-seed it.
 
