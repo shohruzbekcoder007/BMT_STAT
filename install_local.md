@@ -14,5 +14,5 @@ python -m app.main
 
 Open http://127.0.0.1:8080/docs
 
-Only the `echo` example tool is registered — add your own in
-`agents/hermes_host.py` → `_host_langchain_tools()`.
+With `DC_API_KEY` set, the Data Commons `dc_` tools are registered — see
+**Adding a tool** in the README for your own.

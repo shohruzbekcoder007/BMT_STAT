@@ -102,16 +102,65 @@ Everything Hermes learns lives under `HERMES_HOME` — `memories/`, `skills/`,
 volume so a redeploy does not wipe it. `config/hermes_config.yaml` is copied in
 only when the volume has no `config.yaml` yet; delete the volume to re-seed it.
 
-Toolsets such as `terminal`, `code_execution`, `file` and `browser` let the
-agent act inside the container. Set `API_BEARER_TOKEN` before enabling any of
-them — `/v1/chat` is unauthenticated while it is unset.
+### Prompt-injection guards
+
+Anything the model reads — a user message, a Data Commons result, a memory it
+wrote earlier — can steer which tools it calls. So the boundary is the tool
+set, enforced in `agents/security.py`:
+
+- **Toolset allowlist.** Only `memory`, `session_search`, `skills`, `todo`,
+  `clarify` and `datacommons` are allowed. Anything else — `terminal`, `file`,
+  `code_execution`, `browser`, `web`, `delegation`, bundles such as `coding`
+  that pull those in — stops the service at startup unless
+  `ALLOW_UNSAFE_TOOLSETS=true`. It is an allowlist because a denylist misses
+  bundles and plugin toolsets.
+- **`skills.inline_shell: false`, pinned.** With it on, `skill_view` runs
+  `` !`cmd` `` snippets in a skill, and the `skills` toolset lets the agent
+  write that skill itself. It is forced off in the shared config and in every
+  user profile's `config.yaml` as the profile is opened — existing volumes
+  included.
+- **Root-owned code.** In the image `/app` belongs to root; the service
+  (`appuser`) can write only `logs/`, `data/` and the Hermes homes. It cannot
+  rewrite its code or prompts, or drop a plugin into `/app/.hermes/plugins`.
+
+## Data Commons MCP
+
+World statistics (countries, regions, indicators, time series) come from the
+official Data Commons MCP server, `https://api.datacommons.org/mcp`. Set
+`DC_API_KEY` (free, https://apikeys.datacommons.org) and the host gets six
+tools, prefixed `dc_`:
+
+`dc_search_indicators`, `dc_search_child_indicators`,
+`dc_get_variable_metadata`, `dc_get_observations`,
+`dc_get_child_observations`, `dc_get_multi_entity_observations`.
+
+The MCP client runs in-process (`agents/datacommons_mcp.py`, stdlib only) and
+`agents/datacommons_tools.py` hands the same tools to both backends:
+
+| Backend | How the tools arrive |
+|---|---|
+| `hermes` | registered in Hermes' global tool registry, toolset `datacommons` — appended to `HERMES_ENABLED_TOOLSETS` automatically, visible to every user profile |
+| `hermes_lite` | LangChain `StructuredTool`s from `_host_langchain_tools()` |
+
+Hermes' own `mcp_servers:` config is not used: it is only discovered from
+Hermes' CLI/gateway entry points, and it is read per `HERMES_HOME`, which this
+service overrides per user.
+
+The server's main playbook (`data-commons-researcher`) is appended to the
+system prompt — its tool descriptions require reading it before the first
+call. `DATACOMMONS_PLAYBOOK=false` turns that off.
+
+Startup never fails on Data Commons. If the server is unreachable the host
+runs without the `dc_` tools, `/ready` reports it under `datacommons.error`,
+and a later chat request retries (at most every `DATACOMMONS_RETRY_SECONDS`).
 
 ## Layout
 
 ```
 agents/
   hermes_host.py    host agent: sessions, backends, tool loop
-  example_tool.py   template tool (`echo`) — copy this for your own
+  datacommons_mcp.py    MCP client (Streamable HTTP, stdlib only)
+  datacommons_tools.py  Data Commons tools for both backends
 app/
   api.py            FastAPI routes
   main.py           process entrypoint (uvicorn)
@@ -150,10 +199,20 @@ curl -s localhost:9095/v1/chat -H 'content-type: application/json' \
 
 ## Adding a tool
 
-1. Copy `agents/example_tool.py`, rename the function, write a real docstring —
-   the LLM reads it to decide when to call the tool.
-2. Register it in `agents/hermes_host.py` → `_host_langchain_tools()`.
-3. Describe it in `prompts/hermes_coordinator.md` under **Tools**.
+A tool has to reach both backends, and they take tools from different places.
+`agents/datacommons_tools.py` is the pattern:
+
+1. **hermes** — register it in Hermes' registry, `tools.registry.registry.register(...)`,
+   under a toolset of your own; the host calls that before the backend is built
+   (see `_load_datacommons()`).
+2. **hermes_lite** — return it as a LangChain tool from
+   `agents/hermes_host.py` → `_host_langchain_tools()`.
+3. Add the toolset to `SAFE_TOOLSETS` in `agents/security.py` only if it cannot
+   run commands, read files or reach arbitrary URLs.
+4. Describe it in `prompts/hermes_coordinator.md` under **Tools**.
+
+Adding it to `_host_langchain_tools()` alone is not enough: the hermes backend
+never reads that list.
 
 ## Configuration
 

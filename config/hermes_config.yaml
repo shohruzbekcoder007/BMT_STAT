@@ -24,6 +24,11 @@ tools:
 memory:
   provider: ""
 
+# Never on: skill_view would execute !`cmd` snippets, and the agent can write
+# skills itself. agents/security.py re-pins this in every profile at startup.
+skills:
+  inline_shell: false
+
 security:
   allow_dangerous_tools: false
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import secrets
+from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
@@ -222,8 +223,25 @@ def _check_rate_limit(profile: UserProfile, request: Request) -> None:
         )
 
 
+def _require_safe_agent() -> None:
+    """Refuse to start with tools a prompt injection could run commands with.
+
+    Checked here, before the port opens, for the same reason as the gateway
+    token: a risky setting should stop the deploy, not surface later.
+    """
+    from agents.security import check_toolsets, harden_hermes_config
+
+    raw = os.getenv("HERMES_ENABLED_TOOLSETS", "")
+    check_toolsets(t.strip() for t in raw.split(",") if t.strip())
+
+    hermes_home = os.getenv("HERMES_HOME", "").strip()
+    if hermes_home:
+        harden_hermes_config(Path(hermes_home).expanduser() / "config.yaml")
+
+
 def create_app() -> FastAPI:
     _require_auth_configured()
+    _require_safe_agent()
 
     app = FastAPI(
         title=os.getenv("APP_NAME", "methodologyagent"),

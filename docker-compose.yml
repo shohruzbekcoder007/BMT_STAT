@@ -41,6 +41,12 @@ services:
       OLLAMA_TASK_MODEL: ${OLLAMA_TASK_MODEL:-}
       OLLAMA_API_KEY: ${OLLAMA_API_KEY:-}
       HERMES_TASK_ROUTING: ${HERMES_TASK_ROUTING:-true}
+      # Data Commons MCP — empty key leaves the dc_ tools off
+      DC_API_KEY: ${DC_API_KEY:-}
+      DATACOMMONS_MCP_URL: ${DATACOMMONS_MCP_URL:-https://api.datacommons.org/mcp}
+      DATACOMMONS_PLAYBOOK: ${DATACOMMONS_PLAYBOOK:-true}
+      DATACOMMONS_RETRY_SECONDS: ${DATACOMMONS_RETRY_SECONDS:-300}
+      DATACOMMONS_TIMEOUT: ${DATACOMMONS_TIMEOUT:-60}
       HERMES_HOME: /home/appuser/.hermes
       # One full Hermes profile per user lives under here — see README
       # "Multi-user isolation". Own volume, so it survives a redeploy and is
@@ -52,6 +58,8 @@ services:
       # Left empty on purpose: the host derives it from LLM_PROVIDER.
       HERMES_INFERENCE_PROVIDER: ${HERMES_INFERENCE_PROVIDER:-}
       HERMES_ENABLED_TOOLSETS: ${HERMES_ENABLED_TOOLSETS:-memory,session_search,skills,todo}
+      # Anything outside the safe list stops the service unless this is true
+      ALLOW_UNSAFE_TOOLSETS: ${ALLOW_UNSAFE_TOOLSETS:-false}
       HERMES_SYSTEM_PROMPT_PATH: /app/prompts/hermes_coordinator.md
       HERMES_MAX_ITERATIONS: ${HERMES_MAX_ITERATIONS:-12}
       HERMES_SESSION_HISTORY_LIMIT: ${HERMES_SESSION_HISTORY_LIMIT:-6}

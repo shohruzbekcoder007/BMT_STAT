@@ -35,7 +35,12 @@ COPY requirements.txt pyproject.toml README.md ./
 COPY agents ./agents
 COPY app ./app
 
+# Hermes' own runtime dependencies. Its source tree is not pip-installed (see
+# above), so nothing pulls these in otherwise -- read them from its
+# pyproject.toml so they track whatever HERMES_REF declares.
 RUN pip install -r requirements.txt \
+    && python -c "import tomllib; print('\n'.join(tomllib.load(open('/opt/hermes-agent/pyproject.toml', 'rb'))['project']['dependencies']))" > /tmp/hermes-requirements.txt \
+    && pip install -r /tmp/hermes-requirements.txt \
     && pip install .
 
 # Hermes is a hard requirement: fail the build rather than ship an image that
@@ -81,12 +86,16 @@ COPY --from=builder /opt/hermes-agent /opt/hermes-agent
 
 WORKDIR /app
 
-COPY --chown=appuser:appuser agents ./agents
-COPY --chown=appuser:appuser app ./app
-COPY --chown=appuser:appuser prompts ./prompts
-COPY --chown=appuser:appuser config ./config
-COPY --chown=appuser:appuser scripts ./scripts
-COPY --chown=appuser:appuser requirements.txt pyproject.toml README.md ./
+# Code stays root-owned: the service runs as appuser and must not be able to
+# rewrite its own code or prompts, nor drop a plugin into /app/.hermes/plugins
+# (project plugins are enabled). Only logs/, data/ and the Hermes homes below
+# are handed to appuser.
+COPY agents ./agents
+COPY app ./app
+COPY prompts ./prompts
+COPY config ./config
+COPY scripts ./scripts
+COPY requirements.txt pyproject.toml README.md ./
 
 # Strip Windows CRLF from shell scripts (avoids: /usr/bin/env: 'bash\r')
 RUN sed -i 's/\r$//' /app/scripts/*.sh \

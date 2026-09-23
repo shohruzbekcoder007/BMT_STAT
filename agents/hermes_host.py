@@ -244,7 +244,8 @@ class HermesHostService:
         self.max_iterations = _env_int("HERMES_MAX_ITERATIONS", 12)
         self.session_limit = _env_int("HERMES_SESSION_HISTORY_LIMIT", 6)
         self.skip_memory = _env_bool("HERMES_SKIP_MEMORY", False)
-        self.system_prompt = _load_coordinator_prompt()
+        self._base_prompt = _load_coordinator_prompt()
+        self.system_prompt = self._base_prompt
         self._backend: str | None = None  # hermes | hermes_lite
         self._ready = False
         self._last_error: str | None = None
@@ -286,6 +287,21 @@ class HermesHostService:
                 discover_plugins()
             except Exception as exc:  # noqa: BLE001
                 logger.debug("discover_plugins: %s", exc)
+
+            # Before either backend is built: both read the tool set and the
+            # prompt at construction time.
+            self._load_datacommons()
+
+            # app/api.py already refuses to start on this; checked again here
+            # for anything that builds the host without going through the API.
+            from agents.security import UnsafeConfiguration, check_toolsets
+
+            try:
+                check_toolsets(self._enabled_toolsets())
+            except UnsafeConfiguration as exc:
+                self._last_error = str(exc)
+                self._ready = False
+                return self.readiness()
 
             # Prefer real Hermes AIAgent
             if self._try_init_hermes():
@@ -378,23 +394,53 @@ class HermesHostService:
         return kwargs
 
     def _enabled_toolsets(self) -> list[str]:
-        """Parse HERMES_ENABLED_TOOLSETS (empty by default in the starter)."""
+        """Parse HERMES_ENABLED_TOOLSETS (empty by default in the starter).
+
+        The `datacommons` toolset is appended once its tools are registered,
+        so setting DC_API_KEY is enough -- forgetting to list it here would
+        otherwise hide the tools from the hermes backend without a word.
+        """
+        from agents import datacommons_tools as dc
+
         raw = _env("HERMES_ENABLED_TOOLSETS")
-        return [t.strip() for t in raw.split(",") if t.strip()]
+        toolsets = [t.strip() for t in raw.split(",") if t.strip()]
+        if dc.loaded() and dc.TOOLSET not in toolsets:
+            toolsets.append(dc.TOOLSET)
+        return toolsets
+
+    def _load_datacommons(self) -> bool:
+        """
+        Connect the Data Commons MCP server and expose its tools.
+
+        Returns True when the tool set changed, so a caller holding a built
+        hermes_lite graph knows to rebuild it. Never raises: without the
+        server the host still answers, just without statistics.
+        """
+        from agents import datacommons_tools as dc
+
+        if not dc.enabled() or dc.loaded():
+            return False
+        if not dc.ensure_loaded():
+            return False
+        # No-op without the Hermes package; hermes_lite picks the tools up
+        # through _host_langchain_tools().
+        dc.register_hermes_tools()
+        self.system_prompt = self._base_prompt + dc.prompt_section()
+        return True
 
     def _host_langchain_tools(self) -> list[Any]:
         """
-        Tools exposed to the host agent.
-
-        Add your own here — see `agents/example_tool.py` for the shape.
+        Tools for the hermes_lite backend. The hermes backend does not read
+        this list -- it takes tools from Hermes' registry, so a new tool must
+        reach both; see `agents/datacommons_tools.py`.
         """
         tools: list[Any] = []
         try:
-            from agents.example_tool import as_langchain_tools
+            from agents import datacommons_tools
 
-            tools.extend(as_langchain_tools())
+            tools.extend(datacommons_tools.as_langchain_tools())
         except Exception as exc:  # noqa: BLE001
-            logger.debug("example tools not loaded: %s", exc)
+            logger.warning("Data Commons tools not loaded: %s", exc)
         return tools
 
     def _try_init_hermes_lite(self) -> bool:
@@ -451,6 +497,8 @@ class HermesHostService:
         return self._ready
 
     def readiness(self) -> dict[str, Any]:
+        from agents import datacommons_tools
+
         return {
             "ready": self._ready,
             "backend": self._backend,
@@ -465,6 +513,7 @@ class HermesHostService:
             "error": self._last_error,
             "tools": [getattr(t, "name", str(t)) for t in self._host_langchain_tools()],
             "toolsets": self._enabled_toolsets(),
+            "datacommons": datacommons_tools.status(),
         }
 
     def clear_session(self, session_key: str) -> None:
@@ -511,6 +560,13 @@ class HermesHostService:
                     "error_code": "not_ready",
                     "session_id": session_id,
                 }
+
+            # Data Commons was unreachable at startup: retry (cooldown-limited
+            # inside). hermes builds its agent per request and picks the new
+            # tools up by itself; the hermes_lite graph has to be rebuilt.
+            if self._load_datacommons() and self._backend == "hermes_lite":
+                with _lock:
+                    self._try_init_hermes_lite()
 
             client_sid = (session_id or "").strip() or None
             sid = client_sid or str(uuid.uuid4())

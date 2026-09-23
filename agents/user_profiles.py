@@ -30,6 +30,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+from agents.security import harden_hermes_config
+
 logger = logging.getLogger("user_profiles")
 
 # Readable ids pass through as-is. Anchored, and the first character must be
@@ -156,6 +158,8 @@ def _seed_profile(home: Path) -> None:
         template = _seed_template()
         if template is not None:
             shutil.copyfile(template, config)
+    # Also for profiles seeded before the guard existed, or edited since.
+    harden_hermes_config(config)
 
 
 def resolve_profile(raw_id: Optional[str], *, create: bool = True) -> UserProfile:
